@@ -5,6 +5,7 @@ const BPMCounter = () => {
   const [bpm, setBpm] = useState(120);
   const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); // Default to 4/4
   const [isPlaying, setIsPlaying] = useState(false);
+  const [wasPlaying, setWasPlaying] = useState(false); // To track if metronome was playing before BPM change
   const beepRef = useRef(null);
   const clickRef = useRef(null);
   const intervalRef = useRef(null);
@@ -51,8 +52,26 @@ const BPMCounter = () => {
     }
   }, [bpm, beatsPerMeasure, isPlaying]);
 
+  // BPM currently limited to 60-240
   const handleBPMChange = (event) => {
-    setBpm(Number(event.target.value));
+    const inputBpm = Number(event.target.value);
+    const clampedBpm = Math.min(Math.max(inputBpm, 60), 240);
+
+    // Temporarily stop the metronome if it's playing
+    if (isPlaying) {
+      setWasPlaying(true);
+      setIsPlaying(false);
+    }
+
+    setBpm(clampedBpm);
+
+    // After a short delay, restart the metronome if it was playing before
+    setTimeout(() => {
+      if (wasPlaying) {
+        setIsPlaying(true);
+        setWasPlaying(false);
+      }
+    }, 100); // Small delay to ensure BPM is updated before restarting
   };
 
   const handleBeatsChange = (event) => {
