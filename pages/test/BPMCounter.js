@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Howl } from "howler";
 
-const BPMCounter = () => {
+const BPMCounter = ({ onCountoffComplete }) => {
   const [bpm, setBpm] = useState(120);
   const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); // Default to 4/4
   const [isPlaying, setIsPlaying] = useState(false);
@@ -11,53 +11,55 @@ const BPMCounter = () => {
   const intervalRef = useRef(null);
 
   useEffect(() => {
+    const beep = new Howl({
+      src: ["/beep.mp3"],
+      volume: 1.0,
+    });
+
+    const click = new Howl({
+      src: ["/click.mp3"],
+      volume: 1.0,
+    });
+
+    beepRef.current = beep;
+    clickRef.current = click;
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (isPlaying) {
-      const beep = new Howl({
-        src: ["/beep.mp3"], // Path to beep sound
-        volume: 1.0,
-      });
-
-      const click = new Howl({
-        src: ["/click.mp3"], // Path to click sound
-        volume: 1.0,
-      });
-
-      beepRef.current = beep;
-      clickRef.current = click;
-
-      const intervalDuration = (60 / bpm) * 1000; // Duration in milliseconds
-      const measureDuration = intervalDuration * beatsPerMeasure;
-
-      const playSounds = () => {
-        beepRef.current.play();
-        clickRef.current.play();
-        // Schedule clicks on each beat within the measure
-        for (let i = 1; i < beatsPerMeasure; i++) {
-          setTimeout(() => clickRef.current.play(), i * intervalDuration);
-        }
-      };
-
-      // Play sounds on each measure
-      intervalRef.current = setInterval(() => {
-        playSounds();
-      }, measureDuration);
-
-      return () => {
-        clearInterval(intervalRef.current);
-      };
+      startMetronome();
     } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      stopMetronome();
     }
   }, [bpm, beatsPerMeasure, isPlaying]);
 
-  // BPM currently limited to 60-240
+  const startMetronome = () => {
+    const intervalDuration = (60 / bpm) * 1000;
+    const measureDuration = intervalDuration * beatsPerMeasure;
+
+    const playSounds = () => {
+      beepRef.current.play();
+      clickRef.current.play();
+      for (let i = 1; i < beatsPerMeasure; i++) {
+        setTimeout(() => clickRef.current.play(), i * intervalDuration);
+      }
+    };
+
+    intervalRef.current = setInterval(playSounds, measureDuration);
+  };
+
+  const stopMetronome = () => {
+    clearInterval(intervalRef.current);
+  };
+
   const handleBPMChange = (event) => {
     const inputBpm = Number(event.target.value);
     const clampedBpm = Math.min(Math.max(inputBpm, 60), 240);
 
-    // Temporarily stop the metronome if it's playing
     if (isPlaying) {
       setWasPlaying(true);
       setIsPlaying(false);
@@ -65,17 +67,36 @@ const BPMCounter = () => {
 
     setBpm(clampedBpm);
 
-    // After a short delay, restart the metronome if it was playing before
     setTimeout(() => {
       if (wasPlaying) {
         setIsPlaying(true);
         setWasPlaying(false);
       }
-    }, 100); // Small delay to ensure BPM is updated before restarting
+    }, 100);
   };
 
   const handleBeatsChange = (event) => {
     setBeatsPerMeasure(Number(event.target.value));
+  };
+
+  // Function to handle countoff logic, can be used by parent
+  const startCountoff = () => {
+    const barsToWait = 2;
+    const beatsPerBar = beatsPerMeasure;
+    const intervalDuration = (60 / bpm) * 1000;
+    const totalBeats = barsToWait * beatsPerBar;
+
+    let currentBeat = 0;
+
+    const metronomeInterval = setInterval(() => {
+      if (currentBeat < totalBeats) {
+        clickRef.current.play();
+        currentBeat++;
+      } else {
+        clearInterval(metronomeInterval);
+        if (onCountoffComplete) onCountoffComplete(); // Notify parent
+      }
+    }, intervalDuration);
   };
 
   return (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Howl } from "howler";
+import BPMCounter from "./BPMCounter"; // Reuse BPMCounter to handle the click sound
 
 const View = () => {
   // Hardcoded IPFS URLs for tracks and metadata
@@ -14,56 +15,45 @@ const View = () => {
     "http://localhost:8080/ipfs/QmcZhfWp3yTPPocVZxcxMiD6gmDgLWGokv2KhMq1sZtfJw",
   ];
 
-  const [songs, setSongs] = useState([]); // Stores song URLs
-  const [metadata, setMetadata] = useState([]); // Stores metadata
-  const howlerRefs = useRef([]);
+  const [files, setFiles] = useState([]);
+  const [metadata, setMetadata] = useState([]);
   const [muteStates, setMuteStates] = useState({});
+  const howlerRefs = useRef([]);
 
   useEffect(() => {
-    const fetchSongsAndMetadata = async () => {
+    const fetchFilesAndMetadata = async () => {
       try {
-        // Fetch metadata for each track
-        const metadataPromises = hardcodedMetadataCIDs.map(async (cid) => {
-          const response = await fetch(cid);
-          return await response.json();
-        });
+        setFiles(hardcodedSongCIDs);
 
-        const fetchedMetadata = await Promise.all(metadataPromises);
-        setMetadata(fetchedMetadata);
+        const metadataPromises = hardcodedMetadataCIDs.map((cid) =>
+          fetch(cid).then((response) => response.json())
+        );
+        const meta = await Promise.all(metadataPromises);
+        setMetadata(meta);
 
-        // Extract audio track URLs from metadata
-        const songUrls = hardcodedSongCIDs; // Using hardcoded URLs for now
-        setSongs(songUrls);
-
-        // Initialize Howler instances for each song
-        howlerRefs.current = songUrls.map(
-          (url, index) =>
+        howlerRefs.current = hardcodedSongCIDs.map(
+          (file, index) =>
             new Howl({
-              src: [url],
+              src: [file],
               loop: true,
               volume: 1.0,
               format: ["mp3", "ogg"],
-              onloaderror: (id, msg) => {
-                console.error("Howl loading error:", msg);
-              },
             })
         );
 
-        // Initialize mute states for each track
         setMuteStates(
-          songUrls.reduce((acc, _, index) => {
+          hardcodedSongCIDs.reduce((acc, file, index) => {
             acc[index] = false;
             return acc;
           }, {})
         );
       } catch (error) {
-        console.error("Error fetching songs and metadata:", error);
+        console.error("Error fetching metadata or initializing files:", error);
       }
     };
 
-    fetchSongsAndMetadata();
+    fetchFilesAndMetadata();
 
-    // Clean up Howler instances on component unmount
     return () => {
       howlerRefs.current.forEach((howler) => howler.unload());
     };
@@ -91,36 +81,27 @@ const View = () => {
     howlerRefs.current[index].mute(newMuteStates[index]);
   };
 
+  // This function will be passed to BPMCounter to start playing the tracks after the countoff
+  const startPlayingTracks = () => {
+    playAll();
+  };
+
   return (
     <>
-      <h1>Tracks with Metadata</h1>
-      <button onClick={playAll}>Play All</button>
+      <h1>Files</h1>
+      <BPMCounter
+        bpm={metadata[0]?.bpm || 120}
+        startPlayingTracks={startPlayingTracks}
+      />
       <button onClick={pauseAll}>Pause All</button>
       <ul>
-        {songs.map((song, index) => (
+        {files.map((file, index) => (
           <li key={index}>
-            {metadata[index] ? (
-              <>
-                <p>
-                  <strong>Track Name:</strong> {metadata[index].name}
-                </p>
-                <p>
-                  <strong>BPM:</strong> {metadata[index].bpm}
-                </p>
-                <p>
-                  <strong>Instrument:</strong> {metadata[index].instrument}
-                </p>
-              </>
-            ) : (
-              <p>Loading metadata...</p>
-            )}
-            <a href={song} target="_blank" rel="noopener noreferrer">
-              {song}
+            <a href={file} target="_blank" rel="noopener noreferrer">
+              {file}
             </a>
-            <audio controls>
-              <source src={song} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
+            <p>{metadata[index]?.name || "Unknown Track"}</p>
+            <p>{metadata[index]?.instrument || "Unknown Instrument"}</p>
             <button onClick={() => toggleMute(index)}>
               {muteStates[index] ? "Unmute" : "Mute"}
             </button>
