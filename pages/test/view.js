@@ -94,7 +94,6 @@ const View = () => {
   // Merging audio files
   const mergeAudioFiles = async (fileUrls) => {
     const audioContext = new AudioContext();
-
     // Fetch and decode the default website audio file
     const response1 = await fetch(fileUrls[0]);
     const arrayBuffer1 = await response1.arrayBuffer();
