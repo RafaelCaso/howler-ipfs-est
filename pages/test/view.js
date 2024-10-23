@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Howl } from "howler";
 import BPMCounter from "./BPMCounter";
+import Recorder from "./Recorder";
 
 const View = () => {
   const hardcodedSongCIDs = [
@@ -123,6 +124,25 @@ const View = () => {
     }));
   };
 
+  // Handle recording upload similar to file upload
+  const handleRecordingUpload = (audioUrl) => {
+    const newHowl = new Howl({
+      src: [audioUrl],
+      loop: true,
+      volume: 1.0,
+      format: ["wav"], // Ensure format matches
+    });
+
+    stopAllTracks(); // Stop and reset all tracks before adding a new one
+
+    howlerRefs.current.push(newHowl); // Add new track
+    setFiles((prevFiles) => [...prevFiles, audioUrl]); // Add the URL to files array
+    setMuteStates((prevMuteStates) => ({
+      ...prevMuteStates,
+      [files.length]: false,
+    }));
+  };
+
   const startPlayingTracks = () => {
     playAll(); // Play all tracks together
   };
@@ -151,6 +171,7 @@ const View = () => {
 
       <h2>Upload and Preview Additional Track</h2>
       <input type="file" accept="audio/*" onChange={handleFileUpload} />
+      <Recorder uploadRecording={handleRecordingUpload} />
     </>
   );
 };
