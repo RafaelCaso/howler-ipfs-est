@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Howl } from "howler";
 
-const BPMCounter = ({ startPlayingTracks }) => {
+const BPMCounter = ({ startPlayingTracks, pilotBpm }) => {
   const [isCountingOff, setIsCountingOff] = useState(false);
   const clickRef = useRef(null);
 
@@ -19,7 +19,7 @@ const BPMCounter = ({ startPlayingTracks }) => {
   }, []);
 
   const startCountoff = () => {
-    const bpm = 120;
+    const bpm = pilotBpm || 120;
     const intervalDuration = (60 / bpm) * 1000;
     const beatsToWait = 9;
 

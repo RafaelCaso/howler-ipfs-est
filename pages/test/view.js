@@ -4,12 +4,14 @@ import BPMCounter from "./BPMCounter";
 
 const View = () => {
   const hardcodedSongCIDs = [
-    "http://localhost:8080/ipfs/QmYuPWyw2QAP3orqc8QjCKFtWQKC3CmaJ9zDJHzAgp63aP",
-    "http://localhost:8080/ipfs/QmSFLEuRSyMAi8K1CHJwzvkE4M8k2WrnpUXSxfRkUn5fSA",
+    "http://localhost:8080/ipfs/QmUQAoJjy2mJAHHyXAHVnzkbt4LphrfqoT1eDzNj6KBAhU",
+    // "http://localhost:8080/ipfs/QmYuPWyw2QAP3orqc8QjCKFtWQKC3CmaJ9zDJHzAgp63aP",
+    // "http://localhost:8080/ipfs/QmSFLEuRSyMAi8K1CHJwzvkE4M8k2WrnpUXSxfRkUn5fSA",
   ];
   const hardcodedMetadataCIDs = [
-    "http://localhost:8080/ipfs/QmVrg62tc7EfSctKkoYjPozk4obf7XD3s53HzsaurPeUKQ",
-    "http://localhost:8080/ipfs/QmP1Wn4kiaziEM1RWwFzvV7nARWhh4HgrjesRhmeSC23Ck",
+    "http://localhost:8080/ipfs/QmfHUpYzaRhSP4Q3yfhtX8sh5h1JnLtKoEWJCjQSLyW5d4",
+    // "http://localhost:8080/ipfs/QmVrg62tc7EfSctKkoYjPozk4obf7XD3s53HzsaurPeUKQ",
+    // "http://localhost:8080/ipfs/QmP1Wn4kiaziEM1RWwFzvV7nARWhh4HgrjesRhmeSC23Ck",
   ];
 
   const [files, setFiles] = useState([]);
@@ -17,6 +19,7 @@ const View = () => {
   const [muteStates, setMuteStates] = useState({});
   const howlerRefs = useRef([]); // Store Howl instances
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [pilotBpm, setPilotBpm] = useState();
 
   useEffect(() => {
     const fetchFilesAndMetadata = async () => {
@@ -27,6 +30,12 @@ const View = () => {
           fetch(cid).then((response) => response.json())
         );
         const meta = await Promise.all(metadataPromises);
+        meta.forEach((m) => {
+          if (m.pilot) {
+            console.log("pilot found", m);
+            setPilotBpm(m.bpm);
+          }
+        });
         setMetadata(meta);
 
         // Initialize Howl instances for each track
@@ -121,7 +130,7 @@ const View = () => {
   return (
     <>
       <h1>Tracks</h1>
-      <BPMCounter startPlayingTracks={startPlayingTracks} />
+      <BPMCounter startPlayingTracks={startPlayingTracks} pilotBpm={pilotBpm} />
       <button onClick={pauseAll}>Pause All</button>
       <button onClick={stopAllTracks}>Stop All</button>
 
