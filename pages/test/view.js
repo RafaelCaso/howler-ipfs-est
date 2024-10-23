@@ -6,13 +6,11 @@ import Recorder from "./Recorder";
 const View = () => {
   const hardcodedSongCIDs = [
     "http://localhost:8080/ipfs/QmUQAoJjy2mJAHHyXAHVnzkbt4LphrfqoT1eDzNj6KBAhU",
-    // "http://localhost:8080/ipfs/QmYuPWyw2QAP3orqc8QjCKFtWQKC3CmaJ9zDJHzAgp63aP",
-    // "http://localhost:8080/ipfs/QmSFLEuRSyMAi8K1CHJwzvkE4M8k2WrnpUXSxfRkUn5fSA",
+    // You can add more CIDs here
   ];
   const hardcodedMetadataCIDs = [
     "http://localhost:8080/ipfs/QmfHUpYzaRhSP4Q3yfhtX8sh5h1JnLtKoEWJCjQSLyW5d4",
-    // "http://localhost:8080/ipfs/QmVrg62tc7EfSctKkoYjPozk4obf7XD3s53HzsaurPeUKQ",
-    // "http://localhost:8080/ipfs/QmP1Wn4kiaziEM1RWwFzvV7nARWhh4HgrjesRhmeSC23Ck",
+    // You can add more metadata CIDs here
   ];
 
   const [files, setFiles] = useState([]);
@@ -33,22 +31,23 @@ const View = () => {
         const meta = await Promise.all(metadataPromises);
         meta.forEach((m) => {
           if (m.pilot) {
-            console.log("pilot found", m);
+            console.log("Pilot found", m);
             setPilotBpm(m.bpm);
           }
         });
         setMetadata(meta);
 
         // Initialize Howl instances for each track
-        howlerRefs.current = hardcodedSongCIDs.map(
-          (file) =>
-            new Howl({
-              src: [file],
-              loop: true,
-              volume: 1.0,
-              format: ["mp3", "ogg"],
-            })
-        );
+        howlerRefs.current = hardcodedSongCIDs.map((file, index) => {
+          const isPilot = meta[index]?.pilot; // Check if it's the pilot track
+          return new Howl({
+            src: [file],
+            loop: isPilot, // Only loop the pilot track
+            volume: 1.0,
+            format: ["mp3", "ogg"],
+            onend: !isPilot ? () => howlerRefs.current[index].stop() : null, // Stop accompaniments after they finish
+          });
+        });
 
         setMuteStates(
           hardcodedSongCIDs.reduce((acc, file, index) => {
@@ -109,9 +108,10 @@ const View = () => {
 
     const newHowl = new Howl({
       src: [url],
-      loop: true,
+      loop: false, // Do not loop uploaded tracks
       volume: 1.0,
       format: ["mp3", "ogg"],
+      onend: () => newHowl.stop(), // Stop the track after it finishes
     });
 
     stopAllTracks(); // Stop and reset all tracks before adding a new one
@@ -128,9 +128,10 @@ const View = () => {
   const handleRecordingUpload = (audioUrl) => {
     const newHowl = new Howl({
       src: [audioUrl],
-      loop: true,
+      loop: false, // Do not loop recordings
       volume: 1.0,
       format: ["wav"], // Ensure format matches
+      onend: () => newHowl.stop(), // Stop after it finishes
     });
 
     stopAllTracks(); // Stop and reset all tracks before adding a new one
@@ -171,7 +172,7 @@ const View = () => {
 
       <h2>Upload and Preview Additional Track</h2>
       <input type="file" accept="audio/*" onChange={handleFileUpload} />
-      <Recorder uploadRecording={handleRecordingUpload} />
+      <Recorder pilotBpm={pilotBpm} uploadRecording={handleRecordingUpload} />
     </>
   );
 };
